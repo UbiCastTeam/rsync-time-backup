@@ -599,6 +599,9 @@ while : ; do
 		fn_log_error "Rsync reported an error. Run this command for more details: grep -E 'rsync:|rsync error:' '$LOG_FILE'"
 	elif [ -n "$(grep "rsync:" "$LOG_FILE")" ]; then
 		fn_log_warn "Rsync reported a warning. Run this command for more details: grep -E 'rsync:|rsync error:' '$LOG_FILE'"
+	elif [ $CMD_RETURNCODE -eq 24 ]; then
+		fn_log_warn "Rsync reported some files vanished."
+		EXIT_CODE=0
 	elif [ $CMD_RETURNCODE -ne 0 ]; then
 		fn_log_error "Rsync returned non-zero return code, backup failed."
 		EXIT_CODE=${CMD_RETURNCODE}
