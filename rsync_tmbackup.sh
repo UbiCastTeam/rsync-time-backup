@@ -32,7 +32,7 @@ trap 'fn_terminate_script' SIGINT
 # Small utility functions for reducing code duplication
 # -----------------------------------------------------------------------------
 fn_display_usage() {
-	echo "Usage: $(basename $0) [OPTION]... <[USER@HOST:]SOURCE> <[USER@HOST:]DESTINATION> [exclude-pattern-file]"
+	echo "Usage: $(basename $0) [OPTION]... [HOST:]SOURCE [HOST:]DESTINATION [exclude-pattern-file]"
 	echo ""
 	echo "Options"
 	echo " -p, --port             SSH port."
@@ -174,28 +174,26 @@ fn_expire_backups() {
 
 fn_parse_ssh() {
 	# To keep compatibility with bash version < 3, we use grep
-	if echo "$DEST_FOLDER"|grep -Eq '^[A-Za-z0-9\._%\+\-]+@[A-Za-z0-9.\-]+\:.+$'
+	if echo "$DEST_FOLDER" | grep -Eq '^[@A-Za-z0-9.\-]+\:.+$'
 	then
-		SSH_USER=$(echo "$DEST_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\1/')
-		SSH_HOST=$(echo "$DEST_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\2/')
-		SSH_DEST_FOLDER=$(echo "$DEST_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\3/')
+		SSH_HOST=$(echo "$DEST_FOLDER" | sed -E 's/^([@A-Za-z0-9\._%\+\-]+)\:(.+)$/\1/')
+		SSH_DEST_FOLDER=$(echo "$DEST_FOLDER" | sed -E 's/^([@A-Za-z0-9\._%\+\-]+)\:(.+)$/\2/')
 		if [ -n "$ID_RSA" ] ; then
-			SSH_CMD="ssh -p $SSH_PORT -i $ID_RSA ${SSH_USER}@${SSH_HOST}"
+			SSH_CMD="ssh -p $SSH_PORT -i $ID_RSA ${SSH_HOST}"
 		else
-			SSH_CMD="ssh -p $SSH_PORT ${SSH_USER}@${SSH_HOST}"
+			SSH_CMD="ssh -p $SSH_PORT ${SSH_HOST}"
 		fi
-		SSH_DEST_FOLDER_PREFIX="${SSH_USER}@${SSH_HOST}:"
-	elif echo "$SRC_FOLDER"|grep -Eq '^[A-Za-z0-9\._%\+\-]+@[A-Za-z0-9.\-]+\:.+$'
+		SSH_DEST_FOLDER_PREFIX="${SSH_HOST}:"
+	elif echo "$SRC_FOLDER" | grep -Eq '^[@A-Za-z0-9.\-]+\:.+$'
 	then
-		SSH_USER=$(echo "$SRC_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\1/')
-		SSH_HOST=$(echo "$SRC_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\2/')
-		SSH_SRC_FOLDER=$(echo "$SRC_FOLDER" | sed -E  's/^([A-Za-z0-9\._%\+\-]+)@([A-Za-z0-9.\-]+)\:(.+)$/\3/')
+		SSH_HOST=$(echo "$SRC_FOLDER" | sed -E 's/^([@A-Za-z0-9\._%\+\-]+)\:(.+)$/\1/')
+		SSH_SRC_FOLDER=$(echo "$SRC_FOLDER" | sed -E 's/^([@A-Za-z0-9\._%\+\-]+)\:(.+)$/\2/')
 		if [ -n "$ID_RSA" ] ; then
-			SSH_CMD="ssh -p $SSH_PORT -i $ID_RSA ${SSH_USER}@${SSH_HOST}"
+			SSH_CMD="ssh -p $SSH_PORT -i $ID_RSA ${SSH_HOST}"
 		else
-			SSH_CMD="ssh -p $SSH_PORT ${SSH_USER}@${SSH_HOST}"
+			SSH_CMD="ssh -p $SSH_PORT ${SSH_HOST}"
 		fi
-		SSH_SRC_FOLDER_PREFIX="${SSH_USER}@${SSH_HOST}:"
+		SSH_SRC_FOLDER_PREFIX="${SSH_HOST}:"
 	fi
 }
 
@@ -261,7 +259,6 @@ fn_df_t() {
 # -----------------------------------------------------------------------------
 # Source and destination information
 # -----------------------------------------------------------------------------
-SSH_USER=""
 SSH_HOST=""
 SSH_DEST_FOLDER=""
 SSH_SRC_FOLDER=""
@@ -604,6 +601,7 @@ while : ; do
 		fn_log_warn "Rsync reported a warning. Run this command for more details: grep -E 'rsync:|rsync error:' '$LOG_FILE'"
 	elif [ $CMD_RETURNCODE -ne 0 ]; then
 		fn_log_error "Rsync returned non-zero return code, backup failed."
+		EXIT_CODE=${CMD_RETURNCODE}
 	else
 		fn_log_info "Backup completed without errors."
 		if [[ $AUTO_DELETE_LOG == "1" ]]; then
